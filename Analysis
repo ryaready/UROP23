@@ -1,0 +1,48 @@
+import pandas as pd 
+import numpy as np 
+import matplotlib as plt
+
+facebook_comments = pd.read_csv (r'/Users/aishwaryaiyer/Desktop/AllFaceBookComments.csv')
+print (facebook_comments)
+facebook_comments['message'].replace('', np.nan, inplace=True)
+facebook_comments.dropna(inplace = True)
+print (facebook_comments)
+facebook_comments = facebook_comments[facebook_comments.language == "en"]
+print (facebook_comments)
+facebook_comments['message'].replace('', np.nan, inplace=True)
+facebook_comments.dropna(inplace = True)
+
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+import vaderSentiment.vaderSentiment as vv
+
+analyzer = SentimentIntensityAnalyzer()
+
+facebook_comments['compound'] = [analyzer.polarity_scores(x)['compound'] for x in facebook_comments['message']]
+facebook_comments['neg'] = [analyzer.polarity_scores(x)['neg'] for x in facebook_comments['message']]
+facebook_comments['neu'] = [analyzer.polarity_scores(x)['neu'] for x in facebook_comments['message']]
+facebook_comments['pos'] = [analyzer.polarity_scores(x)['pos'] for x in facebook_comments['message']]
+del facebook_comments['language']
+print (facebook_comments)
+
+import nltk; nltk.download('stopwords')
+import re
+import gensim
+import gensim.corpora as corpora
+from gensim.utils import simple_preprocess
+from gensim.models import CoherenceModel
+import pyLDAvis
+import pyLDAvis.gensim  # don't skip this
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+from nltk.corpus import stopwords
+stop_words = stopwords.words('english')
+stop_words.extend(['from', 'subject', 're', 'edu', 'use'])
+
+def sent_to_words(sentences):
+    for sentence in sentences:
+        yield(gensim.utils.simple_preprocess(str(sentence), deacc=True))  # deacc=True removes punctuations
+
+facebook_comments = list(sent_to_words(facebook_comments['message']))
+
+print facebook_comments
