@@ -1,28 +1,34 @@
-import pandas as pd 
-import numpy as np 
+import pandas as pd
+import numpy as np
 import matplotlib as plt
 
-facebook_comments = pd.read_csv (r'/Users/aishwaryaiyer/Desktop/AllFaceBookComments.csv')
+facebook_comments = pd.read_csv (r'/Users/aishwaryaiyer/Desktop/AllFaceBookComm>
 print (facebook_comments)
+
+
 facebook_comments['message'].replace('', np.nan, inplace=True)
 facebook_comments.dropna(inplace = True)
 print (facebook_comments)
+
 facebook_comments = facebook_comments[facebook_comments.language == "en"]
-print (facebook_comments)
 facebook_comments['message'].replace('', np.nan, inplace=True)
 facebook_comments.dropna(inplace = True)
+print (facebook_comments)
 
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import vaderSentiment.vaderSentiment as vv
 
 analyzer = SentimentIntensityAnalyzer()
 
-facebook_comments['compound'] = [analyzer.polarity_scores(x)['compound'] for x in facebook_comments['message']]
-facebook_comments['neg'] = [analyzer.polarity_scores(x)['neg'] for x in facebook_comments['message']]
-facebook_comments['neu'] = [analyzer.polarity_scores(x)['neu'] for x in facebook_comments['message']]
-facebook_comments['pos'] = [analyzer.polarity_scores(x)['pos'] for x in facebook_comments['message']]
+facebook_comments['compound'] = [analyzer.polarity_scores(x)['compound'] for x>
+facebook_comments['neg'] = [analyzer.polarity_scores(x)['neg'] for x in facebo>
+facebook_comments['neu'] = [analyzer.polarity_scores(x)['neu'] for x in facebo>
+facebook_comments['pos'] = [analyzer.polarity_scores(x)['pos'] for x in facebo>
 del facebook_comments['language']
 print (facebook_comments)
+
+message = facebook_comments['message']
+print(message)
 
 import nltk; nltk.download('stopwords')
 import re
@@ -33,16 +39,84 @@ from gensim.models import CoherenceModel
 import pyLDAvis
 import pyLDAvis.gensim  # don't skip this
 import matplotlib.pyplot as plt
-%matplotlib inline
 
 from nltk.corpus import stopwords
 stop_words = stopwords.words('english')
 stop_words.extend(['from', 'subject', 're', 'edu', 'use'])
 
+import spacy
+import en_core_web_sm
+nlp = en_core_web_sm.load()
+spacy.prefer_gpu()
+
 def sent_to_words(sentences):
-    for sentence in sentences:
-        yield(gensim.utils.simple_preprocess(str(sentence), deacc=True))  # deacc=True removes punctuations
+  for sentence in sentences:
+    yield(gensim.utils.simple_preprocess(str(sentence), deacc=True))  #deacc=True removes punctuations
+message = list(sent_to_words(message))
+print(message)
 
-facebook_comments = list(sent_to_words(facebook_comments['message']))
 
-print facebook_comments
+# Build the bigram and trigram models
+bigram = gensim.models.Phrases(message, min_count=5, threshold=100) # higher threshold fewer phrases.
+trigram = gensim.models.Phrases(bigram[message], threshold=100)
+# Faster way to get a sentence clubbed as a trigram/bigram
+bigram_mod = gensim.models.phrases.Phraser(bigram)
+trigram_mod = gensim.models.phrases.Phraser(trigram)
+# See trigram example
+print(trigram_mod[bigram_mod[message[1]]])
+
+
+def remove_stopwords(texts):
+    return [[word for word in simple_preprocess(str(doc)) if word not in stop_words] for doc in texts]
+
+def make_bigrams(texts):
+    return [bigram_mod[doc] for doc in texts]
+
+def make_trigrams(texts):
+    return [trigram_mod[bigram_mod[doc]] for doc in texts]
+
+def lemmatization(texts, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV']):
+    """https://spacy.io/api/annotation"""
+    texts_out = []
+    for sent in texts:
+        doc = nlp(" ".join(sent))
+        texts_out.append([token.lemma_ for token in doc if token.pos_ in allowed_postags])
+    return texts_out
+
+
+message_nostops = remove_stopwords(message)
+
+message_bigrams = make_bigrams(message_nostops)
+
+message_lemmatized = lemmatization(message_bigrams, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV'])
+
+print(message_lemmatized[:1])
+
+# Create Dictionary
+id2word = corpora.Dictionary(message_lemmatized)
+
+# Create Corpus
+texts = message_lemmatized
+
+# Term Document Frequency
+corpus = [id2word.doc2bow(text) for text in texts]
+
+# View
+print(corpus[:1])
+
+from pprint import pprint# Gensim
+
+lda_model = gensim.models.ldamodel.LdaModel(corpus=corpus,
+                                           id2word=id2word,
+                                           num_topics=20,
+                                           random_state=100,
+                                           update_every=1,
+                                           chunksize=100,
+                                           passes=10,
+                                           alpha='auto',
+                                           per_word_topics=True)
+
+
+print(lda_model.print_topics())
+doc_lda = lda_model[corpus]
+
