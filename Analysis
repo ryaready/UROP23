@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib as plt
 
-facebook_comments = pd.read_csv (r'/Users/aishwaryaiyer/Desktop/AllFaceBookComm>
+facebook_comments = pd.read_csv (r'/Users/aishwaryaiyer/Desktop/AllFaceBookComments')
 print (facebook_comments)
 
 
